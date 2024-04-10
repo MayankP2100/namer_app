@@ -1,16 +1,18 @@
-# namer_app
+# Description
 
-A new Flutter project.
+A Flutter app to generate random pair of words.
 
-## Getting Started
+## Functionality
 
-This project is a starting point for a Flutter application.
+### Buttons
+❤️ Like - Click to add a pair to the Favorites.
+Next - Click to generate a new random pair of words.
+### Pages
+🏠 Home - Go to the Home page of the app.
+❤️ Favorites - Go the Favorite page to view your liked pairs.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Todo
+- Add animations to make generation of pairs smoother.
+- Add history of pairs generated.
+- Revamp the Favorites Page for better UI/UX.
+- Implement 'Remove favorite pair' feature. 
