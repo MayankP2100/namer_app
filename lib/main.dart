@@ -1,5 +1,6 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -27,13 +28,27 @@ class MyApp extends StatelessWidget {
 
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
+  var previous = WordPair.random();
 
   void getNext() {
+    previous = current;
     current = WordPair.random();
+
+    if (history.length > 6) {
+      history.removeAt(0);
+      history.add(previous);
+    } else {
+      history.add(previous);
+    }
     notifyListeners();
   }
 
   var favorites = <WordPair>[];
+  var history = <WordPair>[];
+
+  MyAppState() {
+    previous = current;
+  }
 
   void toggleFavorite() {
     if (favorites.contains(current)) {
@@ -41,6 +56,11 @@ class MyAppState extends ChangeNotifier {
     } else {
       favorites.add(current);
     }
+    notifyListeners();
+  }
+
+  void removeFavorite(WordPair pair) {
+    favorites.remove(pair);
     notifyListeners();
   }
 }
@@ -55,6 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     Widget page;
     switch (selectedIndex) {
       case 0:
@@ -108,6 +129,7 @@ class GeneratorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     var pair = appState.current;
+    var history = appState.history;
 
     IconData icon;
     if (appState.favorites.contains(pair)) {
@@ -120,6 +142,26 @@ class GeneratorPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Expanded(
+            child: Center(
+              child: ListView(
+                physics: NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.all(20),
+                shrinkWrap: true,
+                children: [
+                  for (var pair in history)
+                    Padding(
+                      padding: const EdgeInsets.all(18.0),
+                      child: Text(
+                        pair.asLowerCase,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16.0, color: Colors.red),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
           BigCard(pair: pair),
           SizedBox(height: 10),
           Row(
@@ -141,6 +183,7 @@ class GeneratorPage extends StatelessWidget {
               ),
             ],
           ),
+          Spacer(),
         ],
       ),
     );
@@ -160,16 +203,29 @@ class BigCard extends StatelessWidget {
     final theme = Theme.of(context);
     final style = theme.textTheme.displayMedium!.copyWith(
       color: theme.colorScheme.onPrimary,
+      fontWeight: FontWeight.bold,
     );
 
     return Card(
       color: theme.colorScheme.primary,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Text(
-          pair.asLowerCase,
-          style: style,
-          semanticsLabel: "${pair.first} ${pair.second}",
+        child: AnimatedSize(
+          duration: Duration(milliseconds: 200),
+          child: MergeSemantics(
+            child: Wrap(
+              children: [
+                Text(
+                  pair.first,
+                  style: style.copyWith(fontWeight: FontWeight.w200),
+                ),
+                Text(
+                  pair.second,
+                  style: style.copyWith(fontWeight: FontWeight.bold),
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -185,13 +241,25 @@ class FavoritesPage extends StatelessWidget {
     var favorites = appState.favorites;
     return ListView(
       children: [
-        Padding(padding: const EdgeInsets.all(20.0),
-        child: Text('You have '
-          '${favorites.length} favorites:'),
+        Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: Text(
+            'You have '
+            '${favorites.length} favorites:',
+            style: TextStyle(fontSize: 18),
+          ),
         ),
         for (var pair in favorites)
           ListTile(
-            leading: Icon(Icons.favorite),
+            leading: IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+              ),
+              onPressed: () {
+                appState.removeFavorite(pair);
+              },
+            ),
             title: Text(pair.asLowerCase),
           )
       ],
