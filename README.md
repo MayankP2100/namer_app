@@ -12,7 +12,4 @@ Next - Click to generate a new random pair of words.
 ❤️ Favorites - Go the Favorite page to view your liked pairs.
 
 ## Todo
-- Add animations to make generation of pairs smoother.
-- Add history of pairs generated.
 - Revamp the Favorites Page for better UI/UX.
-- Implement 'Remove favorite pair' feature. 
