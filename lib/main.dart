@@ -1,9 +1,16 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:namer_app/data.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
+  await Hive.initFlutter();
+  Hive.registerAdapter(WordPairDataAdapter());
+
+  await Hive.openBox('db');
+
   runApp(MyApp());
 }
 
@@ -40,27 +47,66 @@ class MyAppState extends ChangeNotifier {
     } else {
       history.add(previous);
     }
+
     notifyListeners();
   }
 
-  var favorites = <WordPair>[];
+  List<WordPair> favorites = <WordPair>[];
   var history = <WordPair>[];
+
+  Future<void> loadData() async {
+    final box = await Hive.openBox('db');
+
+    List<WordPairData> ls = (box.get('favorites') as List<dynamic>)
+        .map((e) => e as WordPairData)
+        .toList();
+    favorites = ls.map((e) => WordPair(e.first, e.second)).toList();
+
+    notifyListeners();
+  }
+
+  Future<void> saveData() async {
+    var box = await Hive.openBox('db');
+    var data = favorites
+        .map((element) => WordPairData()
+          ..first = element.first
+          ..second = element.second)
+        .toList();
+
+    box.put('favorites', data);
+  }
 
   MyAppState() {
     previous = current;
   }
 
-  void toggleFavorite() {
+  Future<void> toggleFavorite() async {
+    await loadData();
     if (favorites.contains(current)) {
-      favorites.remove(current);
+      removeFavorite(current);
     } else {
       favorites.add(current);
+      await saveData();
+      await loadData();
     }
+
     notifyListeners();
   }
 
-  void removeFavorite(WordPair pair) {
-    favorites.remove(pair);
+  Future<void> removeFavorite(WordPair pair) async {
+    await loadData();
+    final removeElement = favorites
+        .where((element) =>
+            element.first == pair.first && element.second == pair.second)
+        .toList();
+
+    if (removeElement.isNotEmpty) {
+      favorites.remove(removeElement.first);
+    }
+
+    await saveData();
+    await loadData();
+
     notifyListeners();
   }
 }
@@ -168,8 +214,8 @@ class GeneratorPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
+                onPressed: () async {
+                  await appState.toggleFavorite();
                 },
                 icon: Icon(icon),
                 label: Text('Like'),
@@ -232,37 +278,47 @@ class BigCard extends StatelessWidget {
   }
 }
 
-class FavoritesPage extends StatelessWidget {
+class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
 
   @override
+  State<FavoritesPage> createState() => _FavoritesPageState();
+}
+
+class _FavoritesPageState extends State<FavoritesPage> {
+  @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    var favorites = appState.favorites;
-    return ListView(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Text(
-            'You have '
-            '${favorites.length} favorites:',
-            style: TextStyle(fontSize: 18),
-          ),
-        ),
-        for (var pair in favorites)
-          ListTile(
-            leading: IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                color: Colors.red,
+    return ValueListenableBuilder<Box>(
+      valueListenable: Hive.box('db').listenable(),
+      builder: (context, box, widget) {
+        return ListView(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(40.0),
+              child: Text(
+                'You have '
+                '${(box.get('favorites') as List<dynamic>).length} favorites:',
+                style: TextStyle(fontSize: 18),
               ),
-              onPressed: () {
-                appState.removeFavorite(pair);
-              },
             ),
-            title: Text(pair.asLowerCase),
-          )
-      ],
+            for (WordPairData pair in box.get('favorites'))
+              ListTile(
+                leading: IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () async {
+                    await appState
+                        .removeFavorite(WordPair(pair.first, pair.second));
+                  },
+                ),
+                title: Text(WordPair(pair.first, pair.second).asLowerCase),
+              )
+          ],
+        );
+      },
     );
   }
 }
