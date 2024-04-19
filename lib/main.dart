@@ -57,7 +57,7 @@ class MyAppState extends ChangeNotifier {
   Future<void> loadData() async {
     final box = await Hive.openBox('db');
 
-    List<WordPairData> ls = (box.get('favorites') as List<dynamic>)
+    List<WordPairData> ls = ((box.get('favorites') ?? []) as List<dynamic>)
         .map((e) => e as WordPairData)
         .toList();
     favorites = ls.map((e) => WordPair(e.first, e.second)).toList();
@@ -298,7 +298,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               padding: const EdgeInsets.all(40.0),
               child: Text(
                 'You have '
-                '${(box.get('favorites') as List<dynamic>).length} favorites:',
+                '${((box.get('favorites') ?? []) as List<dynamic>).length} favorites:',
                 style: TextStyle(fontSize: 18),
               ),
             ),
